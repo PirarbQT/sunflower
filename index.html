@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sunflower Generative Art — ดอกทานตะวัน</title>
+  <style>
+    :root{
+      --bg:#0b1020;          /* deep night blue */
+      --panel:#101730;       /* card background */
+      --text:#e6ecff;
+      --accent:#ffd54a;      /* sunflower yellow */
+      --muted:#9fb0d8;
+      --ring:#2b3b72;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font:14px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 70% -10%, #16234a 0%, var(--bg) 60%);
+      color:var(--text);
+      display:flex; align-items:center; justify-content:center; padding:16px;
+    }
+    .app{width:min(1100px, 100%);}
+    header{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+    header h1{font-size:22px; margin:0}
+    header span{font-size:12px; color:var(--muted)}
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.00));
+      border:1px solid var(--ring); border-radius:16px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .stage{position:relative; background:conic-gradient(from 180deg at 50% 120%, #0e172f 0%, #0a0f21 60%, #0a0f21 100%);}
+    canvas{display:block; width:100%; height:60vh; min-height:420px}
+
+    .controls{display:grid; grid-template-columns: repeat(6, 1fr); gap:12px; padding:14px; background:var(--panel); border-top:1px solid var(--ring)}
+    @media (max-width:920px){ .controls{grid-template-columns: repeat(3, 1fr);} }
+    @media (max-width:560px){ .controls{grid-template-columns: repeat(2, 1fr);} }
+
+    .ctl{background:rgba(255,255,255,0.03); border:1px solid var(--ring); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:6px}
+    .ctl label{font-size:12px; color:var(--muted)}
+    .ctl input[type="range"]{width:100%}
+    .row{display:flex; align-items:center; justify-content:space-between; gap:8px}
+    .row input[type="number"]{width:86px; padding:6px 8px; border-radius:8px; border:1px solid var(--ring); background:#0c1329; color:var(--text)}
+
+    .buttons{display:flex; gap:10px; align-items:center}
+    button, .btn{
+      border:1px solid var(--ring); background:#0e1731; color:var(--text); padding:10px 12px; border-radius:12px; cursor:pointer;
+      transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
+    }
+    button:hover{transform: translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,.35)}
+    button:active{transform: translateY(0)}
+    .accent{background:linear-gradient(180deg, #1b2857, #0f1a42); border-color:#31438a}
+
+    footer{padding:10px 14px; font-size:12px; color:var(--muted)}
+    a{color:var(--accent)}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l1.5 3.5L17 7l-3.5 1.5L12 12l-1.5-3.5L7 7l3.5-1.5L12 2z"/><circle cx="12" cy="12" r="3"/></svg>
+      <h1>Sunflower — ดอกทานตะวัน (Generative)</h1>
+      <span>Phyllotaxis • Canvas • Export PNG • Interactive</span>
+    </header>
+
+    <div class="card">
+      <div class="stage"><canvas id="c"></canvas></div>
+
+      <div class="controls">
+        <div class="ctl">
+          <label>จำนวนเมล็ด (Seeds)</label>
+          <input id="seeds" type="range" min="200" max="2500" value="1200" step="10">
+          <div class="row"><small>ค่าปัจจุบัน</small><input id="seedsNum" type="number" min="200" max="2500" step="10" value="1200"></div>
+        </div>
+        <div class="ctl">
+          <label>สเกลดอก (Scale)</label>
+          <input id="scale" type="range" min="2" max="12" value="7" step="0.1">
+          <div class="row"><small>ค่าปัจจุบัน</small><input id="scaleNum" type="number" min="2" max="12" step="0.1" value="7"></div>
+        </div>
+        <div class="ctl">
+          <label>กลีบ (Petals)</label>
+          <input id="petals" type="range" min="12" max="48" value="24" step="1">
+          <div class="row"><small>ค่าปัจจุบัน</small><input id="petalsNum" type="number" min="12" max="48" step="1" value="24"></div>
+        </div>
+        <div class="ctl">
+          <label>ความยาวกลีบ</label>
+          <input id="petalLen" type="range" min="0.6" max="1.6" value="1.1" step="0.05">
+          <div class="row"><small>ค่าปัจจุบัน</small><input id="petalLenNum" type="number" min="0.6" max="1.6" step="0.05" value="1.1"></div>
+        </div>
+        <div class="ctl">
+          <label>ความอวบของกลีบ</label>
+          <input id="petalFat" type="range" min="0.4" max="1.4" value="0.9" step="0.05">
+          <div class="row"><small>ค่าปัจจุบัน</small><input id="petalFatNum" type="number" min="0.4" max="1.4" step="0.05" value="0.9"></div>
+        </div>
+        <div class="ctl">
+          <label>ลม (ส่ายเบา ๆ)</label>
+          <input id="wind" type="range" min="0" max="1" value="0.25" step="0.01">
+          <div class="row"><small>Animate</small><label class="row" style="gap:6px"><input id="animate" type="checkbox" checked> <span>เปิด</span></label></div>
+        </div>
+        <div class="ctl buttons" style="grid-column: 1/-1; justify-content: flex-end;">
+          <button id="randomize">สุ่มลุค</button>
+          <button id="reset">รีเซ็ต</button>
+          <button id="export" class="accent">บันทึกเป็น PNG</button>
+        </div>
+      </div>
+
+      <footer>
+        สร้างด้วยสูตร <em>phyllotaxis</em> (golden angle) สำหรับการจัดเรียงเมล็ดทานตะวัน + วาดกลีบด้วย Bézier บน Canvas.
+      </footer>
+    </div>
+  </div>
+
+  <script>
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("c");
+  const ctx = canvas.getContext("2d");
+
+  const controls = [
+    ["seeds","seedsNum"],
+    ["scale","scaleNum"],
+    ["petals","petalsNum"],
+    ["petalLen","petalLenNum"],
+    ["petalFat","petalFatNum"],
+    ["wind"],
+  ];
+
+  function syncSliders(){
+    for(const pair of controls){
+      const [r, n] = pair;
+      const range = $(r);
+      const num = n ? $(n) : null;
+      if(num){
+        range.addEventListener('input', ()=>{ num.value = range.value; requestFrame(); });
+        num.addEventListener('input', ()=>{ range.value = num.value; requestFrame(); });
+      }else{
+        range.addEventListener('input', requestFrame);
+      }
+    }
+  }
+
+  function resize(){
+    const ratio = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    canvas.width = Math.floor(w * ratio);
+    canvas.height = Math.floor(h * ratio);
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+    requestFrame();
+  }
+
+  // Golden angle in radians
+  const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5)); // ~2.399963
+
+  let t = 0;      // time for animation
+  let raf = null; // requestAnimationFrame id
+
+  function lerp(a,b,u){ return a + (b-a)*u; }
+
+  function draw(){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    ctx.clearRect(0,0,w,h);
+
+    // Sky gradient
+    const g = ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0, "#0c1636");
+    g.addColorStop(.6, "#0a1127");
+    g.addColorStop(1, "#070d1c");
+    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+
+    // Ground
+    const gg = ctx.createLinearGradient(0, h*0.6, 0, h);
+    gg.addColorStop(0, "#0a1b2f");
+    gg.addColorStop(1, "#06101c");
+    ctx.fillStyle = gg; ctx.fillRect(0, h*0.75, w, h*0.25);
+
+    const cx = w*0.5, cy = h*0.62;
+
+    const animate = $("animate").checked;
+    const wind = parseFloat($("wind").value);
+    const sway = animate ? Math.sin(t*0.8) * wind * 0.25 : 0;
+
+    // Stem
+    drawStem(cx, cy, sway, h);
+
+    // Leaves
+    for(let i=0;i<2;i++) drawLeaf(cx, cy, sway, i===0? -1:1, i*0.4);
+
+    // Flower (seeds + petals)
+    ctx.save();
+    ctx.translate(cx, cy - 10);
+    ctx.rotate(sway);
+
+    drawPetals();
+    drawSeeds();
+    drawDisk();
+
+    ctx.restore();
+
+    // Time advance for animation
+    if(animate){ t += 0.016; }
+  }
+
+  function drawStem(cx, cy, sway, h){
+    ctx.save();
+    ctx.translate(0,0);
+    ctx.strokeStyle = "#225a28";
+    ctx.fillStyle = "#1b4a22";
+    ctx.lineWidth = 14;
+    ctx.lineCap = "round";
+
+    // Swayed stem path using quadratic curves
+    const baseY = h*0.98;
+    ctx.beginPath();
+    ctx.moveTo(cx, baseY);
+    ctx.quadraticCurveTo(cx + 30*Math.sin(sway*1.6), lerp(baseY, cy, .6), cx + 8*Math.sin(sway*2.0), cy);
+    ctx.stroke();
+
+    // subtle highlight
+    ctx.lineWidth = 4; ctx.strokeStyle = "rgba(180,255,190,0.12)";
+    ctx.beginPath();
+    ctx.moveTo(cx-3, baseY);
+    ctx.quadraticCurveTo(cx + 20*Math.sin(sway*1.2)-3, lerp(baseY, cy, .55), cx + 2*Math.sin(sway*1.8)-3, cy);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawLeaf(cx, cy, sway, side=1, phase=0){
+    ctx.save();
+    ctx.translate(cx, cy+20);
+    ctx.rotate(sway*1.3 + phase);
+    const len = 120, width = 60;
+    ctx.fillStyle = "#2b8a3e";
+    ctx.strokeStyle = "#1d6b2f";
+
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(side*width*0.8, -len*0.35, side*width, -len*0.75);
+    ctx.quadraticCurveTo(side*width*0.4, -len*0.9, 0, -len);
+    ctx.quadraticCurveTo(-side*width*0.4, -len*0.9, -side*width, -len*0.75);
+    ctx.quadraticCurveTo(-side*width*0.8, -len*0.35, 0,0);
+    ctx.closePath();
+    ctx.fill();
+
+    // veins
+    ctx.lineWidth = 1.2; ctx.strokeStyle = "rgba(230,255,230,0.35)";
+    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(0, -len*0.92); ctx.stroke();
+    for(let i=1;i<7;i++){
+      const y = -i*len/7;
+      const dx = side*(i%2? 20:14);
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.quadraticCurveTo(dx*0.7, y-8, dx, y-18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.quadraticCurveTo(-dx*0.7, y-8, -dx, y-18); ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawSeeds(){
+    const N = parseInt($("seeds").value, 10);
+    const scale = parseFloat($("scale").value);
+
+    const baseRadius = 3.4; // base seed radius
+
+    for(let n=0;n<N;n++){
+      const r = scale * Math.sqrt(n);
+      const a = n * GOLDEN_ANGLE;
+      const x = r * Math.cos(a);
+      const y = r * Math.sin(a);
+
+      // slight size tapering + jitter for organic feel
+      const k = 1 - n/N; // from center (1) to outer (0)
+      const radius = baseRadius * (0.6 + k*0.7) + (Math.random()-0.5)*0.06;
+
+      // color gradient from dark center to bright outer
+      const hue = 42 + k*12; // yellow-brown range
+      const sat = 80 - k*30;
+      const lig = 22 + k*20;
+      ctx.fillStyle = `hsl(${hue} ${sat}% ${lig}%)`;
+
+      ctx.beginPath();
+      ctx.ellipse(x, y, radius*1.2, radius, a*0.2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  function drawDisk(){
+    // central dark disk
+    const grd = ctx.createRadialGradient(0,0,6, 0,0,90);
+    grd.addColorStop(0, "#3b2600");
+    grd.addColorStop(0.5, "#2b1c00");
+    grd.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(0,0,90,0,Math.PI*2); ctx.fill();
+  }
+
+  function drawPetals(){
+    const count = parseInt($("petals").value, 10);
+    const lenFactor = parseFloat($("petalLen").value);
+    const fat = parseFloat($("petalFat").value);
+
+    const baseLen = 140 * lenFactor;
+    const baseWidth = 34 * fat;
+
+    for(let i=0;i<count;i++){
+      const ang = (i / count) * Math.PI * 2;
+      ctx.save();
+      ctx.rotate(ang);
+
+      // gradient per petal
+      const lg = ctx.createLinearGradient(0,0,0,-baseLen);
+      lg.addColorStop(0, "#a46b00");
+      lg.addColorStop(0.22, "#f7b300");
+      lg.addColorStop(0.9, "#ffd54a");
+      lg.addColorStop(1, "#fff2a8");
+      ctx.fillStyle = lg;
+      ctx.strokeStyle = "rgba(0,0,0,0.15)";
+
+      ctx.beginPath();
+      ctx.moveTo(0, -10);
+      // left side curve
+      ctx.bezierCurveTo(-baseWidth*0.9, -baseLen*0.20, -baseWidth*0.9, -baseLen*0.65, 0, -baseLen);
+      // right side curve
+      ctx.bezierCurveTo(baseWidth*0.9, -baseLen*0.65, baseWidth*0.9, -baseLen*0.20, 0, -10);
+      ctx.closePath();
+      ctx.fill();
+
+      // central vein
+      ctx.lineWidth = 1; ctx.strokeStyle = "rgba(255,255,255,0.22)";
+      ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, -baseLen*0.95); ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // add outer glow for petals
+    ctx.save();
+    ctx.shadowColor = "rgba(255,215,90,0.25)";
+    ctx.shadowBlur = 22;
+    ctx.beginPath(); ctx.arc(0,0,160,0,Math.PI*2); ctx.strokeStyle = "rgba(255,220,120,0.15)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+  }
+
+  // --- interactions ---
+  function requestFrame(){
+    if(!raf){ raf = requestAnimationFrame(()=>{ raf = null; draw(); }); }
+  }
+
+  $("randomize").addEventListener('click', ()=>{
+    const rnd = (min,max,step=1)=> Math.round((min + Math.random()*(max-min))/step)*step;
+    $("seeds").value = $("seedsNum").value = rnd(700, 2000, 10);
+    $("scale").value = $("scaleNum").value = (Math.random()*6 + 4).toFixed(1);
+    $("petals").value = $("petalsNum").value = rnd(16, 40, 1);
+    $("petalLen").value = $("petalLenNum").value = (Math.random()*0.8 + 0.8).toFixed(2);
+    $("petalFat").value = $("petalFatNum").value = (Math.random()*0.8 + 0.6).toFixed(2);
+    $("wind").value = (Math.random()*0.6).toFixed(2);
+    requestFrame();
+  });
+
+  $("reset").addEventListener('click', ()=>{
+    $("seeds").value = $("seedsNum").value = 1200;
+    $("scale").value = $("scaleNum").value = 7;
+    $("petals").value = $("petalsNum").value = 24;
+    $("petalLen").value = $("petalLenNum").value = 1.1;
+    $("petalFat").value = $("petalFatNum").value = 0.9;
+    $("wind").value = 0.25;
+    $("animate").checked = true;
+    requestFrame();
+  });
+
+  $("export").addEventListener('click', ()=>{
+    // export at device pixel ratio for crisp image
+    const link = document.createElement('a');
+    link.download = 'sunflower.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  syncSliders();
+  window.addEventListener('resize', resize);
+  resize();
+
+  // animation loop (kept light; we re-render in draw())
+  (function loop(){ requestFrame(); requestAnimationFrame(loop); })();
+  </script>
+</body>
+</html>
